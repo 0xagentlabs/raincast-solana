@@ -268,6 +268,54 @@ h3 {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+.bet-form {
+  display: grid;
+  gap: 8px;
+}
+.bet-form > label {
+  font-size: 14px;
+  font-weight: 700;
+}
+.amount-input {
+  position: relative;
+}
+.amount-input input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 54px 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  color: var(--fg);
+  background: #fff;
+  font: inherit;
+}
+.amount-input input[aria-invalid="true"] {
+  border-color: #b91c1c;
+}
+.amount-input input:focus-visible {
+  outline: 3px solid #86efac;
+  outline-offset: 2px;
+}
+.amount-input span {
+  position: absolute;
+  right: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+}
+.field-help,
+.field-error {
+  min-height: 21px;
+  margin: -2px 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.field-error {
+  color: #b91c1c;
+}
 .bet-actions button {
   min-height: 46px;
   border-radius: 11px;
