@@ -28,7 +28,15 @@ export function claimIx(bettor: PublicKey, market: PublicKey) { return new Trans
   { pubkey: bettor, isSigner: true, isWritable: true }, { pubkey: market, isSigner: false, isWritable: true },
   { pubkey: positionPda(market, bettor), isSigner: false, isWritable: true }
 ], data: Buffer.from([4]) }); }
+export function settleIx(oracle: PublicKey, market: PublicKey, precipitationMm: number) {
+  const value = Math.round(precipitationMm * 10); if (!Number.isFinite(value) || value < 0 || value > 65535) throw new Error("天气数据无效");
+  const data = Buffer.alloc(11); data[0] = 3; data.writeUInt16LE(value, 1); data.writeBigInt64LE(BigInt(Math.floor(Date.now()/1000)), 3);
+  return new TransactionInstruction({ programId: PROGRAM_ID, keys: [
+    { pubkey: oracle, isSigner: true, isWritable: false }, { pubkey: CONFIG, isSigner: false, isWritable: false },
+    { pubkey: market, isSigner: false, isWritable: true }
+  ], data });
+}
+export async function readOracle(connection: import("@solana/web3.js").Connection) { const info = await connection.getAccountInfo(CONFIG); if (!info || info.data.length !== 72) throw new Error("Config 未初始化"); return new PublicKey(info.data.subarray(40,72)); }
 
 export type Market = { address: PublicKey; creator: PublicKey; id: bigint; closeTs: number; resolveTs: number; lat: number; lon: number; threshold: number; yes: bigint; no: bigint; outcome: number; precipitation: number };
 export function parseMarket(address: PublicKey, d: Buffer): Market { return { address, outcome: d[2], creator: new PublicKey(d.subarray(8, 40)), id: d.readBigUInt64LE(40), closeTs: Number(d.readBigInt64LE(48)), resolveTs: Number(d.readBigInt64LE(56)), lat: d.readInt32LE(64)/10000, lon: d.readInt32LE(68)/10000, threshold: d.readUInt16LE(72)/10, yes: d.readBigUInt64LE(80), no: d.readBigUInt64LE(88), precipitation: d.readUInt16LE(96)/10 }; }
-

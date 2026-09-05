@@ -1,0 +1,3 @@
+.operator { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; }
+.operator.verified { color: var(--primary); font-weight: 700; }
+.oracle-button { display: flex; align-items: center; justify-content: center; gap: 8px; }
