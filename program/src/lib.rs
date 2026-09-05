@@ -71,6 +71,7 @@ pub fn process_instruction(
         3 => settle(accounts, rest),
         4 => claim(accounts, rest),
         5 => set_oracle(accounts, rest),
+        6 => withdraw_fees(accounts, rest),
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }
@@ -292,13 +293,13 @@ fn place_bet(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     Ok(())
 }
 
-// accounts oracle(s), config, market(w); data precipitation_tenth_mm u16 + observed_at i64
+// accounts oracle(s), config(w), market(w); data precipitation_tenth_mm u16 + observed_at i64
 fn settle(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     if a.len() != 3 || d.len() != 10 {
         return Err(WeatherError::InvalidAccounts.into());
     }
     let (oracle, config, market) = (&a[0], &a[1], &a[2]);
-    if !oracle.is_signer() || !market.is_writable() {
+    if !oracle.is_signer() || !config.is_writable() || !market.is_writable() {
         return Err(WeatherError::InvalidAccounts.into());
     }
     validate_config(config)?;
@@ -323,9 +324,32 @@ fn settle(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
         return Err(WeatherError::ObservationStale.into());
     }
     let threshold = u16_at(&md, 72)?;
-    md[2] = if precipitation >= threshold { 1 } else { 2 }; // 1 YES, 2 NO
+    let pool = u64_at(&md, 80)?
+        .checked_add(u64_at(&md, 88)?)
+        .ok_or(WeatherError::MathOverflow)?;
+    let outcome = if precipitation >= threshold { 1 } else { 2 }; // 1 YES, 2 NO
+    let winning_total = if outcome == 1 {
+        u64_at(&md, 80)?
+    } else {
+        u64_at(&md, 88)?
+    };
+    // If nobody backed the winning side, all stakes are refunded and no fee is charged.
+    let fee = if winning_total == 0 { 0 } else { pool / 100 };
+    md[2] = outcome;
     md[96..98].copy_from_slice(&precipitation.to_le_bytes());
     md[104..112].copy_from_slice(&observed_at.to_le_bytes());
+    md[112..120].copy_from_slice(&fee.to_le_bytes());
+    drop(md);
+    if fee != 0 {
+        let config_balance = config.lamports();
+        *market.try_borrow_mut_lamports()? = market
+            .lamports()
+            .checked_sub(fee)
+            .ok_or(WeatherError::InvalidAmount)?;
+        *config.try_borrow_mut_lamports()? = config_balance
+            .checked_add(fee)
+            .ok_or(WeatherError::MathOverflow)?;
+    }
     Ok(())
 }
 
@@ -348,6 +372,9 @@ fn claim(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     }
     let yes_total = u64_at(&md, 80)?;
     let no_total = u64_at(&md, 88)?;
+    let fee = u64_at(&md, 112)?;
+    let claimed_winning_stake = u64_at(&md, 120)?;
+    let paid = u64_at(&md, 128)?;
     drop(md);
     let mut pd = position.try_borrow_mut_data()?;
     if pd[2] != 0 {
@@ -371,11 +398,22 @@ fn claim(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     let pool = yes_total
         .checked_add(no_total)
         .ok_or(WeatherError::MathOverflow)?;
+    let distributable = pool.checked_sub(fee).ok_or(WeatherError::MathOverflow)?;
+    let new_claimed_stake = claimed_winning_stake
+        .checked_add(stake)
+        .ok_or(WeatherError::MathOverflow)?;
+    if winning_total != 0 && new_claimed_stake > winning_total {
+        return Err(WeatherError::InvalidState.into());
+    }
     let payout = if winning_total == 0 {
         stake
+    } else if new_claimed_stake == winning_total {
+        distributable
+            .checked_sub(paid)
+            .ok_or(WeatherError::MathOverflow)?
     } else {
         (stake as u128)
-            .checked_mul(pool as u128)
+            .checked_mul(distributable as u128)
             .ok_or(WeatherError::MathOverflow)?
             .checked_div(winning_total as u128)
             .ok_or(WeatherError::MathOverflow)? as u64
@@ -391,6 +429,43 @@ fn claim(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
         .ok_or(WeatherError::MathOverflow)?;
     pd[2] = 1;
     pd[88..96].copy_from_slice(&payout.to_le_bytes());
+    drop(pd);
+    if winning_total != 0 {
+        let mut md = market.try_borrow_mut_data()?;
+        md[120..128].copy_from_slice(&new_claimed_stake.to_le_bytes());
+        md[128..136].copy_from_slice(
+            &paid
+                .checked_add(payout)
+                .ok_or(WeatherError::MathOverflow)?
+                .to_le_bytes(),
+        );
+    }
+    Ok(())
+}
+
+// accounts authority(s,w), config(w); withdraw all accrued fees above rent
+fn withdraw_fees(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
+    if a.len() != 2 || !d.is_empty() {
+        return Err(WeatherError::InvalidAccounts.into());
+    }
+    let (authority, config) = (&a[0], &a[1]);
+    signer_writable(authority)?;
+    if !config.is_writable() {
+        return Err(WeatherError::InvalidAccounts.into());
+    }
+    validate_config(config)?;
+    if &config.try_borrow_data()?[8..40] != authority.key() {
+        return Err(WeatherError::InvalidAuthority.into());
+    }
+    let amount = config.lamports().saturating_sub(rent(CONFIG_LEN)?);
+    if amount == 0 {
+        return Err(WeatherError::InvalidAmount.into());
+    }
+    let balance = authority.lamports();
+    *config.try_borrow_mut_lamports()? -= amount;
+    *authority.try_borrow_mut_lamports()? = balance
+        .checked_add(amount)
+        .ok_or(WeatherError::MathOverflow)?;
     Ok(())
 }
 
