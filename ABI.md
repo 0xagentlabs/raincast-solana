@@ -12,9 +12,9 @@ All integers are little-endian. The program ID is `BbkDnkPC7HD8TeNHp3iCDwjLxF3WD
 | 5 | SetOracle | new oracle `pubkey[32]` | config authority signer; config writable |
 | 6 | WithdrawFees | none | config authority signer+writable; config writable |
 
-PDA seeds: config `["config"]`; schedule `["schedule"]`; market `["market", creator, market_id_le]`; position `["position", market, bettor]`.
+PDA seeds: config `["config"]`; schedule `["schedule", latitude_e4_le, longitude_e4_le]`; market `["market", creator, market_id_le]`; position `["position", market, bettor]`.
 
-Schedule data (16 bytes): discriminator 0 (`4`); bump 1; latest market resolve timestamp 8..16. `CreateMarket` atomically rejects creation while the current Unix timestamp is earlier than this timestamp, so market time ranges cannot overlap.
+Schedule data (16 bytes): discriminator 0 (`4`); bump 1; latest market resolve timestamp 8..16. Each city coordinate pair has an independent schedule. `CreateMarket` atomically rejects creation while the current Unix timestamp is earlier than that city's timestamp, so same-city market ranges cannot overlap while different cities can run concurrently.
 
 Market data (200 bytes): discriminator 0; bump 1; outcome 2 (`0=open,1=YES,2=NO`); creator 8..40; id 40..48; close 48..56; resolve 56..64; latitude 64..68; longitude 68..72; threshold 72..74; YES pool 80..88; NO pool 88..96; observed precipitation 96..98; observed timestamp 104..112; platform fee 112..120; claimed winning stake 120..128; paid winning proceeds 128..136.
 

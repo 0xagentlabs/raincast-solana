@@ -12,10 +12,6 @@ export const CONFIG = PublicKey.findProgramAddressSync(
   [Buffer.from("config")],
   PROGRAM_ID,
 )[0];
-export const SCHEDULE = PublicKey.findProgramAddressSync(
-  [Buffer.from("schedule")],
-  PROGRAM_ID,
-)[0];
 export const MARKET_DURATION_SECONDS = 30 * 60;
 export const BETTING_WINDOW_SECONDS = 25 * 60;
 const i64 = (n: bigint) => {
@@ -39,6 +35,15 @@ export const positionPda = (market: PublicKey, bettor: PublicKey) =>
     [Buffer.from("position"), market.toBuffer(), bettor.toBuffer()],
     PROGRAM_ID,
   )[0];
+export const schedulePda = (latitude: number, longitude: number) => {
+  const coordinates = Buffer.alloc(8);
+  coordinates.writeInt32LE(Math.round(latitude * 10_000), 0);
+  coordinates.writeInt32LE(Math.round(longitude * 10_000), 4);
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("schedule"), coordinates.subarray(0, 4), coordinates.subarray(4)],
+    PROGRAM_ID,
+  )[0];
+};
 
 export function createMarketIx(
   creator: PublicKey,
@@ -76,7 +81,7 @@ export function createMarketIx(
         { pubkey: creator, isSigner: true, isWritable: true },
         { pubkey: market, isSigner: false, isWritable: true },
         { pubkey: CONFIG, isSigner: false, isWritable: false },
-        { pubkey: SCHEDULE, isSigner: false, isWritable: true },
+        { pubkey: schedulePda(latitude, longitude), isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       data,
@@ -232,10 +237,18 @@ export function marketPhase(
 }
 
 export function hasUnfinishedMarket(
-  markets: Pick<Market, "resolveTs" | "outcome">[],
+  markets: Pick<Market, "resolveTs" | "outcome" | "lat" | "lon">[],
   now: number,
+  latitude?: number,
+  longitude?: number,
 ) {
   return markets.some(
-    (market) => market.outcome === 0 && now < market.resolveTs,
+    (market) =>
+      market.outcome === 0 &&
+      now < market.resolveTs &&
+      (latitude === undefined ||
+        longitude === undefined ||
+        (Math.round(market.lat * 10_000) === Math.round(latitude * 10_000) &&
+          Math.round(market.lon * 10_000) === Math.round(longitude * 10_000))),
   );
 }

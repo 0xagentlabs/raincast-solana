@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Keypair, PublicKey } from "@solana/web3.js";
-import { createMarketIx, hasUnfinishedMarket, marketPhase } from "../app/lib/program.ts";
+import { createMarketIx, hasUnfinishedMarket, marketPhase, schedulePda } from "../app/lib/program.ts";
 import { CITIES, cityForCoordinates, cityLabel } from "../app/lib/cities.ts";
 const program = new PublicKey("BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH");
 const u64 = (v: bigint) => { const b=Buffer.alloc(8); b.writeBigUInt64LE(v); return b; };
@@ -17,10 +17,16 @@ test("market status follows close and resolve timestamps", () => {
   assert.equal(marketPhase(market, 300), "awaiting-settlement");
   assert.equal(marketPhase({ ...market, outcome: 1 }, 100), "settled");
 });
-test("new market is blocked only while another interval is unfinished", () => {
-  assert.equal(hasUnfinishedMarket([{ resolveTs: 300, outcome: 0 }], 299), true);
-  assert.equal(hasUnfinishedMarket([{ resolveTs: 300, outcome: 0 }], 300), false);
-  assert.equal(hasUnfinishedMarket([{ resolveTs: 300, outcome: 1 }], 200), false);
+test("new market is blocked only by an unfinished interval in the same city", () => {
+  const shanghai = { resolveTs: 300, outcome: 0, lat: 31.13, lon: 121.47 };
+  assert.equal(hasUnfinishedMarket([shanghai], 299, 31.13, 121.47), true);
+  assert.equal(hasUnfinishedMarket([shanghai], 299, 39.9, 116.4), false);
+  assert.equal(hasUnfinishedMarket([shanghai], 300, 31.13, 121.47), false);
+  assert.equal(hasUnfinishedMarket([{ ...shanghai, outcome: 1 }], 200, 31.13, 121.47), false);
+});
+test("each city has an independent schedule PDA", () => {
+  assert.notEqual(schedulePda(31.13, 121.47).toBase58(), schedulePda(39.9, 116.4).toBase58());
+  assert.equal(schedulePda(31.13, 121.47).toBase58(), schedulePda(31.13, 121.47).toBase58());
 });
 test("all supported cities have unique ids and coordinates", () => {
   assert.equal(CITIES.length, 8);

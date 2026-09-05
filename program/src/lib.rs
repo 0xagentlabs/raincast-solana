@@ -150,8 +150,15 @@ fn create_market(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     let id = u64_at(d, 0)?;
     let close_ts = i64_at(d, 8)?;
     let resolve_ts = i64_at(d, 16)?;
+    let lat_bytes: [u8; 4] = d[24..28]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
+    let lon_bytes: [u8; 4] = d[28..32]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
     let now = Clock::get()?.unix_timestamp;
-    let (expected_schedule, schedule_bump) = find_program_address(&[b"schedule"], &ID);
+    let (expected_schedule, schedule_bump) =
+        find_program_address(&[b"schedule", &lat_bytes, &lon_bytes], &ID);
     if schedule.key() != &expected_schedule {
         return Err(WeatherError::InvalidPda.into());
     }
@@ -166,6 +173,8 @@ fn create_market(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
         }
         .invoke_signed(&[Signer::from(&[
             Seed::from(b"schedule"),
+            Seed::from(&lat_bytes),
+            Seed::from(&lon_bytes),
             Seed::from(&bump_seed),
         ])])?;
         let mut sd = schedule.try_borrow_mut_data()?;

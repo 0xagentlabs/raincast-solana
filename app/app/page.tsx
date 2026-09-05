@@ -110,8 +110,8 @@ export default function Home() {
   async function create() {
     if (!wallet.publicKey) return;
     const createdAt = Math.floor(Date.now() / 1000);
-    if (hasUnfinishedMarket(markets, createdAt)) {
-      setNotice("当前已有未结束的 30 分钟市场，结束后才能创建下一场。");
+    if (hasUnfinishedMarket(markets, createdAt, selectedCity.latitude, selectedCity.longitude)) {
+      setNotice("当前城市已有未结束的 30 分钟市场，结束后才能创建下一场。");
       return;
     }
     const { ix } = createMarketIx(
@@ -151,7 +151,12 @@ export default function Home() {
     !!wallet.publicKey && !!oracle && wallet.publicKey.equals(oracle);
   const isAdmin =
     !!wallet.publicKey && !!authority && wallet.publicKey.equals(authority);
-  const creationBlocked = hasUnfinishedMarket(markets, now);
+  const creationBlocked = hasUnfinishedMarket(
+    markets,
+    now,
+    selectedCity.latitude,
+    selectedCity.longitude,
+  );
   return (
     <main>
       <nav>
@@ -266,7 +271,7 @@ export default function Home() {
           </h1>
           <p className="lead">
             选择城市，发起基于 Open‑Meteo 实时降水数据的 Solana Devnet
-            预测市场。每次仅开放一个 30 分钟市场；测试 SOL，仅用于技术演示。
+            预测市场。同一城市每次仅开放一个 30 分钟市场，不同城市可同时进行；测试 SOL，仅用于技术演示。
           </p>
           <div className="city-picker">
             <label htmlFor="city">预测城市</label>
@@ -290,7 +295,7 @@ export default function Home() {
               disabled={!wallet.publicKey || !!busy || creationBlocked}
             >
               {creationBlocked
-                ? "当前 30 分钟市场进行中"
+                ? "当前城市 30 分钟市场进行中"
                 : `创建${selectedCity.name}预测市场`}
             </button>
             <a
