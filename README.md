@@ -13,5 +13,5 @@ pnpm --dir app dev
 
 Program ID: `BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH`。完整 ABI 见 `ABI.md`，操作和安全说明见 `docs/项目使用说明书.md`。
 
-- App: https://raincast-solana.vercel.app
+- App: https://raincast-solana-0xcevin-5020s-projects.vercel.app
 - Explorer: https://explorer.solana.com/address/BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH?cluster=devnet
