@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { CloudRain, Database, ExternalLink, ShieldCheck } from "lucide-react";
+import { CloudRain, Database, ExternalLink, RefreshCw, ShieldCheck, WalletCards } from "lucide-react";
 import { LAMPORTS_PER_SOL, PublicKey, Transaction, TransactionInstruction } from "@solana/web3.js";
 import { BETTING_WINDOW_SECONDS, betIx, claimIx, createMarketIx, hasUnfinishedMarket, MARKET_DURATION_SECONDS, Market, marketPhase, parseMarket, Position, PROGRAM_ID, readConfig, readPosition, settleIx, withdrawFeesIx } from "@/lib/program";
 const sol = (v: bigint) => (Number(v) / LAMPORTS_PER_SOL).toFixed(3);
@@ -20,12 +20,34 @@ export default function Home() {
   const creationBlocked = hasUnfinishedMarket(markets, now);
   return <main>
     <nav><div className="brand"><span className="logo"><CloudRain size={22}/></span><span>RainCast</span><small>DEVNET</small></div><WalletMultiButton /></nav>
+    {isAdmin ? <>
+      <section className="admin-hero">
+        <div><p className="eyebrow">平台管理面板</p><h1>收益管理</h1><p className="lead">当前钱包与链上 Config authority 一致。平台累计收益统一保存在 Config PDA，可在此一次性领取。</p></div>
+        <span className="admin-badge"><ShieldCheck aria-hidden="true"/> 已验证平台运营地址</span>
+      </section>
+      {notice && <div className="admin-notice notice" role="status">{notice}{noticeSignature && <>：<a href={`https://explorer.solana.com/tx/${noticeSignature}?cluster=devnet`} target="_blank" rel="noreferrer">查看交易详情 <ExternalLink size={15} aria-hidden="true"/></a></>}</div>}
+      <section className="admin-grid" aria-label="平台收益概览">
+        <article className="revenue-card">
+          <div className="revenue-icon"><WalletCards aria-hidden="true"/></div>
+          <p>可领取平台收益</p><strong>{sol(fees)} <small>SOL</small></strong>
+          <span>已扣除 Config 账户的租金豁免余额</span>
+          <button className="primary" disabled={fees===0n||!!busy} onClick={()=>wallet.publicKey&&send(withdrawFeesIx(wallet.publicKey),"fees")}>{busy === "fees" ? "领取中…" : fees === 0n ? "暂无可领取收益" : "领取全部收益"}</button>
+        </article>
+        <article className="admin-summary">
+          <div><span>市场总数</span><strong>{markets.length}</strong></div>
+          <div><span>待结算市场</span><strong>{markets.filter(m=>marketPhase(m,now)==="awaiting-settlement").length}</strong></div>
+          <div><span>已结算市场</span><strong>{markets.filter(m=>m.outcome!==0).length}</strong></div>
+          <button className="ghost" onClick={refresh} disabled={!!busy}><RefreshCw size={17} aria-hidden="true"/>刷新链上数据</button>
+        </article>
+      </section>
+      <footer>管理面板仅对链上配置的平台运营地址显示。所有操作均在 Solana Devnet 执行。</footer>
+    </> : <>
     <section className="hero"><div><p className="eyebrow">天气 × 链上市场</p><h1>未来 30 分钟，<br/>上海会下雨吗？</h1><p className="lead">Open‑Meteo 实时降水数据由运营方钱包签名并写入 Solana Devnet。每次仅开放一个 30 分钟市场；测试 SOL，仅用于技术演示。</p><div className="actions"><button className="primary" onClick={create} disabled={!wallet.publicKey || !!busy || creationBlocked}>{creationBlocked ? "当前 30 分钟市场进行中" : "创建 30 分钟预测市场"}</button><a href={`https://explorer.solana.com/address/${PROGRAM_ID}?cluster=devnet`} target="_blank" rel="noreferrer">查看合约 <ExternalLink size={16}/></a></div></div><div className="weather-card"><span>上海 · 浦东</span><CloudRain size={64}/><strong>未来 30 分钟</strong><p>降水量 ≥ 0.1 mm 即判定为“下雨”</p></div></section>
     <section className="trust"><span><Database/> Open‑Meteo 数据</span><span><ShieldCheck/> Oracle 签名</span><span><CloudRain/> 0.1 mm 阈值</span></section>
-    {isAdmin && <section className="markets"><div className="section-title"><div><p className="eyebrow">后台管理</p><h2>平台收益 {sol(fees)} SOL</h2></div><button className="primary" disabled={fees===0n||!!busy} onClick={()=>wallet.publicKey&&send(withdrawFeesIx(wallet.publicKey),"fees")}>领取全部收益</button></div></section>}
     <section className="markets"><div className="section-title"><div><p className="eyebrow">活跃市场</p><h2>选择你的判断</h2><p className={`operator ${isOperator ? "verified":""}`}><ShieldCheck size={16}/>{isOperator ? "已验证：运营方钱包" : `结算方：${oracle?.toBase58().slice(0,8) || "读取中"}…`}</p></div><button className="ghost" onClick={refresh}>刷新链上数据</button></div>
       {notice && <div className="notice" role="status">{notice}{noticeSignature && <>：<a href={`https://explorer.solana.com/tx/${noticeSignature}?cluster=devnet`} target="_blank" rel="noreferrer">查看交易详情 <ExternalLink size={15}/></a></>}</div>}
       <div className="grid">{markets.length === 0 ? <div className="empty">暂无市场。连接钱包后创建第一个 30 分钟市场。</div> : markets.map(m => { const total=m.yes+m.no; const yesPct=total?Number(m.yes*100n/total):50; const phase=marketPhase(m,now); const canBet=phase==="open"; const due=phase==="awaiting-settlement"; const p=positions[m.address.toBase58()]; const statusLabel={open:"接受预测",closed:"截止","awaiting-settlement":"等待结算",settled:"已结算"}[phase]; return <article key={m.address.toBase58()}><div className="card-head"><span className={`status ${phase}`}>{statusLabel}</span><a aria-label="在浏览器查看市场" href={`https://explorer.solana.com/address/${m.address}?cluster=devnet`} target="_blank" rel="noreferrer"><ExternalLink size={18}/></a></div><h3>{new Date(m.resolveTs*1000).toLocaleString("zh-CN")} 前 30 分钟内，上海降水量是否达到 {m.threshold} mm？</h3><div className="bar"><i style={{width:`${yesPct}%`}}/></div><div className="odds"><span>会下雨 <b>{yesPct}%</b></span><span>不会 <b>{100-yesPct}%</b></span></div><div className="pool">奖池 <strong>{sol(total)} SOL</strong></div>{wallet.publicKey&&<p className="result">我的份额：YES {sol(p?.yes??0n)} / NO {sol(p?.no??0n)} SOL{p?.claimed?` · 已领取 ${sol(p.payout)} SOL`:""}</p>}{!m.outcome ? <>{canBet && <div className="bet-actions"><button onClick={()=>wallet.publicKey && send(betIx(wallet.publicKey,m.address,1,10_000_000n),m.address+"yes")} disabled={!wallet.publicKey||!!busy}>YES · 0.01 SOL</button><button onClick={()=>wallet.publicKey && send(betIx(wallet.publicKey,m.address,0,10_000_000n),m.address+"no")} disabled={!wallet.publicKey||!!busy}>NO · 0.01 SOL</button></div>}{phase==="closed" && <p className="result muted">预测已截止，将在市场到期后结算</p>}{due && isOperator && <button className="claim oracle-button" onClick={()=>settle(m)} disabled={!!busy}><CloudRain size={18}/>获取天气并签名结算</button>}{due && !isOperator && <p className="result">等待运营方钱包签名结算</p>}</> : <><p className="result">结果：{m.outcome===1?"下雨":"未下雨"} · {m.precipitation} mm</p><button className="claim" onClick={()=>wallet.publicKey&&send(claimIx(wallet.publicKey,m.address),"claim")} disabled={!wallet.publicKey||!!busy||!p||p.claimed}>领取收益</button></>}</article>; })}</div>
     </section><footer>RainCast 是 Devnet 技术演示，不构成博彩或投资服务。天气结算依赖授权数据发布者。</footer>
+    </>}
   </main>;
 }
