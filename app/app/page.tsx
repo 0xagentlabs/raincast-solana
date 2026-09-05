@@ -2,7 +2,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { CloudRain, Database, ExternalLink, ShieldCheck } from "lucide-react";
+import {
+  CloudRain,
+  Database,
+  ExternalLink,
+  RefreshCw,
+  ShieldCheck,
+  WalletCards,
+} from "lucide-react";
 import {
   LAMPORTS_PER_SOL,
   PublicKey,
@@ -157,6 +164,98 @@ export default function Home() {
         </div>
         <WalletMultiButton />
       </nav>
+      {isAdmin ? (
+        <>
+          <section className="admin-hero">
+            <div>
+              <p className="eyebrow">平台管理面板</p>
+              <h1>收益管理</h1>
+              <p className="lead">
+                当前钱包与链上 Config authority
+                一致。平台累计收益统一保存在 Config PDA，可在此一次性领取。
+              </p>
+            </div>
+            <span className="admin-badge">
+              <ShieldCheck aria-hidden="true" /> 已验证平台运营地址
+            </span>
+          </section>
+          {notice && (
+            <div className="admin-notice notice" role="status">
+              {notice}
+              {noticeSignature && (
+                <>
+                  ：
+                  <a
+                    href={`https://explorer.solana.com/tx/${noticeSignature}?cluster=devnet`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    查看交易详情 <ExternalLink size={15} aria-hidden="true" />
+                  </a>
+                </>
+              )}
+            </div>
+          )}
+          <section className="admin-grid" aria-label="平台收益概览">
+            <article className="revenue-card">
+              <div className="revenue-icon">
+                <WalletCards aria-hidden="true" />
+              </div>
+              <p>可领取平台收益</p>
+              <strong>
+                {sol(fees)} <small>SOL</small>
+              </strong>
+              <span>已扣除 Config 账户的租金豁免余额</span>
+              <button
+                className="primary"
+                disabled={fees === 0n || !!busy}
+                onClick={() =>
+                  wallet.publicKey &&
+                  send(withdrawFeesIx(wallet.publicKey), "fees")
+                }
+              >
+                {busy === "fees"
+                  ? "领取中…"
+                  : fees === 0n
+                    ? "暂无可领取收益"
+                    : "领取全部收益"}
+              </button>
+            </article>
+            <article className="admin-summary">
+              <div>
+                <span>市场总数</span>
+                <strong>{markets.length}</strong>
+              </div>
+              <div>
+                <span>待结算市场</span>
+                <strong>
+                  {
+                    markets.filter(
+                      (market) =>
+                        marketPhase(market, now) === "awaiting-settlement",
+                    ).length
+                  }
+                </strong>
+              </div>
+              <div>
+                <span>已结算市场</span>
+                <strong>
+                  {markets.filter((market) => market.outcome !== 0).length}
+                </strong>
+              </div>
+              <button className="ghost" onClick={refresh} disabled={!!busy}>
+                <RefreshCw size={17} aria-hidden="true" />
+                刷新链上数据
+              </button>
+            </article>
+          </section>
+          <footer>
+            管理面板仅对链上配置的平台运营地址显示。所有操作均在 Solana Devnet
+            执行。
+          </footer>
+        </>
+      ) : (
+        <>
       <section className="hero">
         <div>
           <p className="eyebrow">天气 × 链上市场</p>
@@ -223,26 +322,6 @@ export default function Home() {
           <CloudRain /> 0.1 mm 阈值
         </span>
       </section>
-      {isAdmin && (
-        <section className="markets">
-          <div className="section-title">
-            <div>
-              <p className="eyebrow">后台管理</p>
-              <h2>平台收益 {sol(fees)} SOL</h2>
-            </div>
-            <button
-              className="primary"
-              disabled={fees === 0n || !!busy}
-              onClick={() =>
-                wallet.publicKey &&
-                send(withdrawFeesIx(wallet.publicKey), "fees")
-              }
-            >
-              领取全部收益
-            </button>
-          </div>
-        </section>
-      )}
       <section className="markets">
         <div className="section-title">
           <div>
@@ -422,6 +501,8 @@ export default function Home() {
         RainCast 是 Devnet
         技术演示，不构成博彩或投资服务。天气结算依赖授权数据发布者。
       </footer>
+        </>
+      )}
     </main>
   );
 }
