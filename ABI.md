@@ -9,6 +9,7 @@ All integers are little-endian. The program ID is `BbkDnkPC7HD8TeNHp3iCDwjLxF3WD
 | 2 | PlaceBet | side `u8` (`0=NO`, `1=YES`); lamports `u64` | bettor signer+writable; market writable; position writable; System Program |
 | 3 | Settle | precipitation_tenth_mm `u16`; observed_at `i64` | configured oracle signer; config; market writable |
 | 4 | Claim | none | bettor signer+writable; market writable; position writable |
+| 5 | SetOracle | new oracle `pubkey[32]` | config authority signer; config writable |
 
 PDA seeds: config `["config"]`; market `["market", creator, market_id_le]`; position `["position", market, bettor]`.
 

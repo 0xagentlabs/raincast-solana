@@ -2,6 +2,8 @@
 
 Solana Devnet 天气预测市场 Demo。用户预测上海指定时间是否达到 0.1 mm 降水；Open‑Meteo 数据由受控预言机签名并用于链上结算。
 
+运营方地址：`Dy6mBH4YeqJCRZohd39iSFaf4jyLaxPeBakbZwt1jToL`。连接该钱包后可在到期市场卡片中直接获取天气并签名结算。
+
 > 仅供技术演示。使用 Devnet 测试 SOL，不构成博彩或投资服务。
 
 ## 快速开始

@@ -1,0 +1,12 @@
+import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, Transaction, TransactionInstruction } from "@solana/web3.js";
+import fs from "node:fs";
+const address = process.argv.find((value, index) => index > 1 && value !== "--") || "";
+const newOracle = new PublicKey(address);
+const payer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(process.env.SOLANA_KEYPAIR || "/root/.config/solana/id.json", "utf8"))));
+const programId = new PublicKey("BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH");
+const [config] = PublicKey.findProgramAddressSync([Buffer.from("config")], programId);
+const connection = new Connection(process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com", "confirmed");
+const ix = new TransactionInstruction({ programId, keys: [{ pubkey: payer.publicKey, isSigner: true, isWritable: false }, { pubkey: config, isSigner: false, isWritable: true }], data: Buffer.concat([Buffer.from([5]), newOracle.toBuffer()]) });
+const signature = await sendAndConfirmTransaction(connection, new Transaction().add(ix), [payer]);
+const info = await connection.getAccountInfo(config); const oracle = info && new PublicKey(info.data.subarray(40,72));
+console.log(JSON.stringify({ signature, oracle: oracle?.toBase58() }));

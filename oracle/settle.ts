@@ -2,7 +2,9 @@ import { Connection, Keypair, PublicKey, sendAndConfirmTransaction, Transaction,
 import fs from "node:fs";
 const programId = new PublicKey("BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH");
 const market = new PublicKey(process.argv[2] || "");
-const oracle = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL("../oracle-keypair.json", import.meta.url), "utf8"))));
+const oraclePath = process.env.ORACLE_KEYPAIR;
+if (!oraclePath) throw new Error("Set ORACLE_KEYPAIR to the configured operator keypair path");
+const oracle = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(oraclePath, "utf8"))));
 const connection = new Connection(process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com", "confirmed");
 const info = await connection.getAccountInfo(market); if (!info || info.data.length !== 200) throw new Error("Market account not found");
 const lat = info.data.readInt32LE(64) / 10_000; const lon = info.data.readInt32LE(68) / 10_000;
@@ -17,4 +19,3 @@ const ix = new TransactionInstruction({ programId, keys: [
 ], data: payload });
 const signature = await sendAndConfirmTransaction(connection, new Transaction().add(ix), [oracle]);
 console.log(JSON.stringify({ source: "Open-Meteo", latitude: lat, longitude: lon, precipitation_mm: mm, observed_at: Number(observedAt), signature }));
-

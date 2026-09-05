@@ -67,8 +67,27 @@ pub fn process_instruction(
         2 => place_bet(accounts, rest),
         3 => settle(accounts, rest),
         4 => claim(accounts, rest),
+        5 => set_oracle(accounts, rest),
         _ => Err(ProgramError::InvalidInstructionData),
     }
+}
+
+// accounts: config authority signer, config writable; data: new oracle pubkey[32]
+fn set_oracle(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
+    if a.len() != 2 || d.len() != 32 {
+        return Err(WeatherError::InvalidAccounts.into());
+    }
+    let (authority, config) = (&a[0], &a[1]);
+    if !authority.is_signer() || !config.is_writable() {
+        return Err(WeatherError::InvalidAccounts.into());
+    }
+    validate_config(config)?;
+    let mut cd = config.try_borrow_mut_data()?;
+    if &cd[8..40] != authority.key() {
+        return Err(WeatherError::InvalidAuthority.into());
+    }
+    cd[40..72].copy_from_slice(d);
+    Ok(())
 }
 
 // accounts: authority(s,w), config(w), system_program; data: oracle[32]
