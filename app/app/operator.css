@@ -4,3 +4,24 @@
 .status.closed { background: #fef3c7; color: #92400e; }
 .status.awaiting-settlement { background: #dbeafe; color: #1e40af; }
 .result.muted { color: var(--muted); font-weight: 600; }
+.admin-hero { padding: 72px 24px 32px; display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
+.admin-hero h1 { margin: 8px 0 12px; font-size: clamp(42px, 6vw, 68px); line-height: 1.05; letter-spacing: -.04em; }
+.admin-hero .lead { margin-bottom: 0; }
+.admin-badge { display: inline-flex; align-items: center; gap: 8px; flex: none; padding: 10px 14px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--primary); font-size: 13px; font-weight: 700; }
+.admin-badge svg { width: 18px; }
+.admin-notice { max-width: 1132px; margin: 16px auto 0; }
+.admin-grid { padding: 24px 24px 80px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 24px; }
+.revenue-card,.admin-summary { background: #fff; border: 1px solid var(--border); border-radius: 24px; padding: 32px; box-shadow: 0 14px 40px #14532d0d; }
+.revenue-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #dcfce7; color: var(--primary); }
+.revenue-card>p { margin: 24px 0 4px; color: var(--muted); }
+.revenue-card>strong { display: block; font-size: clamp(38px, 5vw, 60px); letter-spacing: -.04em; line-height: 1.15; }
+.revenue-card>strong small { font-size: 18px; letter-spacing: 0; }
+.revenue-card>span { display: block; margin: 6px 0 28px; color: var(--muted); font-size: 13px; }
+.revenue-card .primary { width: 100%; }
+.admin-summary { display: flex; flex-direction: column; gap: 0; }
+.admin-summary>div { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid #e2e8f0; }
+.admin-summary>div:first-child { padding-top: 0; }
+.admin-summary>div span { color: var(--muted); }
+.admin-summary>div strong { font-size: 24px; }
+.admin-summary .ghost { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: auto; }
+@media(max-width:760px){.admin-hero{padding-top:35px;align-items:flex-start;flex-direction:column}.admin-grid{grid-template-columns:1fr;padding-top:16px}.admin-notice{margin-left:16px;margin-right:16px}.revenue-card,.admin-summary{padding:24px}}
