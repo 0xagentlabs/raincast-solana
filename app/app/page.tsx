@@ -279,7 +279,7 @@ export default function Home() {
               id="city"
               value={cityId}
               onChange={(event) => setCityId(event.target.value)}
-              disabled={!!busy || creationBlocked}
+              disabled={!!busy}
             >
               {CITIES.map((city) => (
                 <option key={city.id} value={city.id}>
