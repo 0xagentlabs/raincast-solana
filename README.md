@@ -4,7 +4,7 @@ Solana Devnet 天气预测市场 Demo。用户可选择上海、北京、广州�
 
 结算时平台收取奖池的 1%，其余资金全部按份额分配给获胜方；连接链上 Config authority 钱包时会自动进入独立管理面板，可一次领取累计平台收益，普通用户则在市场中查看自己的 YES/NO 份额与领取状态。
 
-运营方地址：`Dy6mBH4YeqJCRZohd39iSFaf4jyLaxPeBakbZwt1jToL`。连接该钱包后可在到期市场卡片中直接获取天气并签名结算。
+Admin（Config authority）与 Oracle 当前均为：`Dy6mBH4YeqJCRZohd39iSFaf4jyLaxPeBakbZwt1jToL`。连接该钱包后页面进入平台管理面板；该地址也拥有到期市场的天气结算权限。
 
 > 仅供技术演示。使用 Devnet 测试 SOL，不构成博彩或投资服务。
 

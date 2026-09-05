@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Keypair, PublicKey } from "@solana/web3.js";
-import { createMarketIx, hasUnfinishedMarket, marketPhase, schedulePda } from "../app/lib/program.ts";
+import { createMarketIx, hasUnfinishedMarket, marketPhase, schedulePda, setAuthorityIx } from "../app/lib/program.ts";
 import { CITIES, cityForCoordinates, cityLabel } from "../app/lib/cities.ts";
 const program = new PublicKey("BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH");
 const u64 = (v: bigint) => { const b=Buffer.alloc(8); b.writeBigUInt64LE(v); return b; };
@@ -10,6 +10,17 @@ test("bet amount round trips as u64", () => { const d=Buffer.concat([Buffer.from
 test("malformed u64 cannot be decoded", () => { assert.throws(()=>Buffer.alloc(7).readBigUInt64LE(0)); });
 test("platform fee is exactly one percent rounded down", () => { const pool=123_456_789n; assert.equal(pool/100n,1_234_567n); assert.equal(pool-pool/100n,122_222_222n); });
 test("withdraw fees instruction has stable tag", () => { assert.deepEqual(Buffer.from([6]),Buffer.from([6])); });
+test("set authority instruction encodes tag, authority and config accounts", () => {
+  const current = Keypair.generate().publicKey;
+  const next = Keypair.generate().publicKey;
+  const ix = setAuthorityIx(current, next);
+  assert.equal(ix.data[0], 7);
+  assert.equal(new PublicKey(ix.data.subarray(1)).toBase58(), next.toBase58());
+  assert.equal(ix.keys.length, 2);
+  assert.equal(ix.keys[0].pubkey.toBase58(), current.toBase58());
+  assert.equal(ix.keys[0].isSigner, true);
+  assert.equal(ix.keys[1].isWritable, true);
+});
 test("market status follows close and resolve timestamps", () => {
   const market = { closeTs: 200, resolveTs: 300, outcome: 0 };
   assert.equal(marketPhase(market, 199), "open");
