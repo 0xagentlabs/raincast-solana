@@ -10,7 +10,7 @@
 .admin-badge { display: inline-flex; align-items: center; gap: 8px; flex: none; padding: 10px 14px; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--primary); font-size: 13px; font-weight: 700; }
 .admin-badge svg { width: 18px; }
 .admin-notice { max-width: 1132px; margin: 16px auto 0; }
-.admin-grid { padding: 24px 24px 80px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 24px; }
+.admin-grid { padding: 24px; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr); gap: 24px; }
 .revenue-card,.admin-summary { background: #fff; border: 1px solid var(--border); border-radius: 24px; padding: 32px; box-shadow: 0 14px 40px #14532d0d; }
 .revenue-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: #dcfce7; color: var(--primary); }
 .revenue-card>p { margin: 24px 0 4px; color: var(--muted); }
@@ -29,4 +29,30 @@
 .role-switch button { min-height: 40px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 700; }
 .role-switch button[aria-pressed="true"] { background: #dcfce7; color: var(--primary); }
 .role-switch button:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
-@media(max-width:760px){nav{height:auto;min-height:84px;align-items:flex-start;gap:12px;padding-top:16px;padding-bottom:16px}.nav-actions{align-items:flex-end;flex-direction:column}.role-switch button{min-height:44px}.admin-hero{padding-top:35px;align-items:flex-start;flex-direction:column}.admin-grid{grid-template-columns:1fr;padding-top:16px}.admin-notice{margin-left:16px;margin-right:16px}.revenue-card,.admin-summary{padding:24px}}
+.admin-markets { padding: 40px 24px 80px; }
+.admin-markets-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.admin-markets-heading h2 { margin: 5px 0; font-size: 36px; }
+.admin-markets-heading p:last-child { margin: 0; color: var(--muted); }
+.result-count { flex: none; padding: 8px 12px; border-radius: 999px; background: #dcfce7; color: var(--primary); font-size: 13px; font-weight: 700; }
+.admin-filters { display: flex; align-items: end; gap: 12px; margin: 24px 0 18px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: #fff; }
+.admin-filters label { display: grid; gap: 6px; min-width: 190px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.admin-filters select { min-height: 44px; padding: 9px 38px 9px 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: var(--fg); font: inherit; }
+.admin-filters select:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
+.clear-filters { min-height: 44px; margin-left: auto; }
+.admin-market-list { display: grid; gap: 12px; }
+.admin-market-row { display: grid; grid-template-columns: minmax(220px, 1.1fr) minmax(280px, 1fr) auto; align-items: center; gap: 24px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: #fff; box-shadow: 0 6px 20px #14532d0a; }
+.admin-market-main { display: grid; gap: 7px; min-width: 0; }
+.admin-market-main>div { display: flex; align-items: center; gap: 8px; }
+.admin-market-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-market-main small { overflow: hidden; color: var(--muted); text-overflow: ellipsis; }
+.admin-market-city { color: var(--primary); font-size: 13px; font-weight: 700; }
+.admin-market-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 0; }
+.admin-market-stats div { min-width: 0; }
+.admin-market-stats dt { color: var(--muted); font-size: 12px; }
+.admin-market-stats dd { margin: 2px 0 0; overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.admin-market-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; max-width: 310px; }
+.admin-market-actions button { min-height: 44px; padding: 10px 14px; }
+.admin-explorer-link { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 10px 5px; color: var(--muted); font-size: 13px; }
+.admin-market-empty { padding: 40px 24px; border: 1px dashed #86efac; border-radius: 16px; background: #fff; color: var(--muted); text-align: center; }
+@media(max-width:900px){.admin-market-row{grid-template-columns:1fr 1fr}.admin-market-actions{grid-column:1/-1;justify-content:flex-start;max-width:none}}
+@media(max-width:760px){nav{height:auto;min-height:84px;align-items:flex-start;gap:12px;padding-top:16px;padding-bottom:16px}.nav-actions{align-items:flex-end;flex-direction:column}.role-switch button{min-height:44px}.admin-hero{padding-top:35px;align-items:flex-start;flex-direction:column}.admin-grid{grid-template-columns:1fr;padding-top:16px}.admin-notice{margin-left:16px;margin-right:16px}.revenue-card,.admin-summary{padding:24px}.admin-markets{padding-top:30px}.admin-markets-heading{align-items:flex-start;flex-direction:column}.admin-filters{align-items:stretch;flex-direction:column}.admin-filters label{min-width:0}.clear-filters{margin-left:0}.admin-market-row{grid-template-columns:1fr;gap:18px}.admin-market-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.admin-market-actions{grid-column:auto}.admin-market-actions button{flex:1 1 140px}.admin-explorer-link{flex:1 1 100%;justify-content:center}}
