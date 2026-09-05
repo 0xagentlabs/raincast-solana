@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Keypair, PublicKey } from "@solana/web3.js";
-import { hasUnfinishedMarket, marketPhase } from "../app/lib/program.ts";
+import { createMarketIx, hasUnfinishedMarket, marketPhase } from "../app/lib/program.ts";
+import { CITIES, cityForCoordinates, cityLabel } from "../app/lib/cities.ts";
 const program = new PublicKey("BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH");
 const u64 = (v: bigint) => { const b=Buffer.alloc(8); b.writeBigUInt64LE(v); return b; };
 test("market PDA is deterministic", () => { const creator=Keypair.generate().publicKey; const a=PublicKey.findProgramAddressSync([Buffer.from("market"),creator.toBuffer(),u64(7n)],program)[0]; const b=PublicKey.findProgramAddressSync([Buffer.from("market"),creator.toBuffer(),u64(7n)],program)[0]; assert.equal(a.toBase58(),b.toBase58()); });
@@ -20,4 +21,21 @@ test("new market is blocked only while another interval is unfinished", () => {
   assert.equal(hasUnfinishedMarket([{ resolveTs: 300, outcome: 0 }], 299), true);
   assert.equal(hasUnfinishedMarket([{ resolveTs: 300, outcome: 0 }], 300), false);
   assert.equal(hasUnfinishedMarket([{ resolveTs: 300, outcome: 1 }], 200), false);
+});
+test("all supported cities have unique ids and coordinates", () => {
+  assert.equal(CITIES.length, 8);
+  assert.equal(new Set(CITIES.map((city) => city.id)).size, CITIES.length);
+  assert.equal(new Set(CITIES.map((city) => `${city.latitude},${city.longitude}`)).size, CITIES.length);
+});
+test("create market encodes the selected city coordinates", () => {
+  const creator = Keypair.generate().publicKey;
+  const city = CITIES[4];
+  const { ix } = createMarketIx(creator, 9n, 100n, 200n, city.latitude, city.longitude);
+  assert.equal(ix.data.readInt32LE(25), Math.round(city.latitude * 10_000));
+  assert.equal(ix.data.readInt32LE(29), Math.round(city.longitude * 10_000));
+  assert.equal(cityForCoordinates(city.latitude, city.longitude)?.id, city.id);
+  assert.equal(cityLabel(city.latitude, city.longitude), "成都 · 锦江");
+});
+test("create market rejects out-of-range coordinates", () => {
+  assert.throws(() => createMarketIx(Keypair.generate().publicKey, 1n, 100n, 200n, 91, 0), /城市坐标无效/);
 });
