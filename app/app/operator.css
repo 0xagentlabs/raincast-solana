@@ -1,3 +1,6 @@
 .operator { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; }
 .operator.verified { color: var(--primary); font-weight: 700; }
 .oracle-button { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.status.closed { background: #fef3c7; color: #92400e; }
+.status.awaiting-settlement { background: #dbeafe; color: #1e40af; }
+.result.muted { color: var(--muted); font-weight: 600; }
