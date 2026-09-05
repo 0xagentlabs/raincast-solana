@@ -23,9 +23,11 @@ pub const ID: Pubkey = [
 const CONFIG_LEN: usize = 72;
 const MARKET_LEN: usize = 200;
 const POSITION_LEN: usize = 96;
+const SCHEDULE_LEN: usize = 16;
 const CONFIG_DISC: u8 = 1;
 const MARKET_DISC: u8 = 2;
 const POSITION_DISC: u8 = 3;
+const SCHEDULE_DISC: u8 = 4;
 const MIN_BET: u64 = 100_000;
 const MAX_OBSERVATION_DELAY: i64 = 48 * 60 * 60;
 
@@ -43,6 +45,7 @@ enum WeatherError {
     AlreadyClaimed,
     NoWinnings,
     ObservationStale,
+    MarketOverlap,
 }
 impl From<WeatherError> for ProgramError {
     fn from(value: WeatherError) -> Self {
@@ -127,14 +130,19 @@ fn initialize(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     Ok(())
 }
 
+// accounts: creator(s,w), market(w), config, schedule(w), system_program
 // data: market_id u64, close_ts i64, resolve_ts i64, lat_e4 i32, lon_e4 i32, threshold_tenth_mm u16
 fn create_market(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
-    if a.len() != 4 || d.len() != 34 {
+    if a.len() != 5 || d.len() != 34 {
         return Err(WeatherError::InvalidAccounts.into());
     }
-    let (creator, market, config, system) = (&a[0], &a[1], &a[2], &a[3]);
+    let (creator, market, config, schedule, system) = (&a[0], &a[1], &a[2], &a[3], &a[4]);
     signer_writable(creator)?;
-    if !market.is_writable() || market.data_len() != 0 || system.key() != &pinocchio_system::ID {
+    if !market.is_writable()
+        || !schedule.is_writable()
+        || market.data_len() != 0
+        || system.key() != &pinocchio_system::ID
+    {
         return Err(WeatherError::InvalidAccounts.into());
     }
     validate_config(config)?;
@@ -142,9 +150,33 @@ fn create_market(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     let close_ts = i64_at(d, 8)?;
     let resolve_ts = i64_at(d, 16)?;
     let now = Clock::get()?.unix_timestamp;
-    if close_ts <= now || resolve_ts <= close_ts {
-        return Err(WeatherError::InvalidTime.into());
+    let (expected_schedule, schedule_bump) = find_program_address(&[b"schedule"], &ID);
+    if schedule.key() != &expected_schedule {
+        return Err(WeatherError::InvalidPda.into());
     }
+    let last_resolve_ts = if schedule.data_len() == 0 {
+        let bump_seed = [schedule_bump];
+        CreateAccount {
+            from: creator,
+            to: schedule,
+            lamports: rent(SCHEDULE_LEN)?,
+            space: SCHEDULE_LEN as u64,
+            owner: &ID,
+        }
+        .invoke_signed(&[Signer::from(&[
+            Seed::from(b"schedule"),
+            Seed::from(&bump_seed),
+        ])])?;
+        let mut sd = schedule.try_borrow_mut_data()?;
+        sd[0] = SCHEDULE_DISC;
+        sd[1] = schedule_bump;
+        0
+    } else {
+        validate_schedule(schedule)?;
+        let sd = schedule.try_borrow_data()?;
+        i64_at(&sd, 8)?
+    };
+    validate_market_times(now, close_ts, resolve_ts, last_resolve_ts)?;
     let id_bytes = id.to_le_bytes();
     let (expected, bump) = find_program_address(&[b"market", creator.key(), &id_bytes], &ID);
     if market.key() != &expected {
@@ -176,6 +208,8 @@ fn create_market(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
     out[64..68].copy_from_slice(&d[24..28]);
     out[68..72].copy_from_slice(&d[28..32]);
     out[72..74].copy_from_slice(&d[32..34]);
+    drop(out);
+    schedule.try_borrow_mut_data()?[8..16].copy_from_slice(&resolve_ts.to_le_bytes());
     Ok(())
 }
 
@@ -393,6 +427,30 @@ fn validate_position(a: &AccountInfo, market: &AccountInfo, bettor: &AccountInfo
     }
     Ok(())
 }
+fn validate_schedule(a: &AccountInfo) -> ProgramResult {
+    let (expected, _) = find_program_address(&[b"schedule"], &ID);
+    if a.key() != &expected || a.owner() != &ID || a.data_len() != SCHEDULE_LEN {
+        return Err(WeatherError::InvalidPda.into());
+    }
+    if a.try_borrow_data()?[0] != SCHEDULE_DISC {
+        return Err(WeatherError::InvalidState.into());
+    }
+    Ok(())
+}
+fn validate_market_times(
+    now: i64,
+    close_ts: i64,
+    resolve_ts: i64,
+    last_resolve_ts: i64,
+) -> ProgramResult {
+    if close_ts <= now || resolve_ts <= close_ts {
+        return Err(WeatherError::InvalidTime.into());
+    }
+    if now < last_resolve_ts {
+        return Err(WeatherError::MarketOverlap.into());
+    }
+    Ok(())
+}
 fn rent(len: usize) -> Result<u64, ProgramError> {
     Ok(Rent::get()?.minimum_balance(len))
 }
@@ -435,5 +493,16 @@ mod tests {
     #[test]
     fn program_id_is_not_system() {
         assert_ne!(ID, pinocchio_system::ID);
+    }
+    #[test]
+    fn rejects_overlapping_market() {
+        assert_eq!(
+            validate_market_times(100, 200, 300, 301),
+            Err(ProgramError::Custom(WeatherError::MarketOverlap as u32))
+        );
+    }
+    #[test]
+    fn accepts_market_after_previous_interval() {
+        assert!(validate_market_times(301, 400, 500, 301).is_ok());
     }
 }

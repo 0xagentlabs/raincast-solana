@@ -2,6 +2,9 @@ import { PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.j
 
 export const PROGRAM_ID = new PublicKey(process.env.NEXT_PUBLIC_PROGRAM_ID || "BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH");
 export const CONFIG = PublicKey.findProgramAddressSync([Buffer.from("config")], PROGRAM_ID)[0];
+export const SCHEDULE = PublicKey.findProgramAddressSync([Buffer.from("schedule")], PROGRAM_ID)[0];
+export const MARKET_DURATION_SECONDS = 30 * 60;
+export const BETTING_WINDOW_SECONDS = 25 * 60;
 const i64 = (n: bigint) => { const b = Buffer.alloc(8); b.writeBigInt64LE(n); return b; };
 const u64 = (n: bigint) => { const b = Buffer.alloc(8); b.writeBigUInt64LE(n); return b; };
 
@@ -14,7 +17,8 @@ export function createMarketIx(creator: PublicKey, id: bigint, closeTs: bigint, 
   data.writeInt32LE(311_300, 25); data.writeInt32LE(1_214_700, 29); data.writeUInt16LE(1, 33);
   return { market, ix: new TransactionInstruction({ programId: PROGRAM_ID, keys: [
     { pubkey: creator, isSigner: true, isWritable: true }, { pubkey: market, isSigner: false, isWritable: true },
-    { pubkey: CONFIG, isSigner: false, isWritable: false }, { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
+    { pubkey: CONFIG, isSigner: false, isWritable: false }, { pubkey: SCHEDULE, isSigner: false, isWritable: true },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
   ], data }) };
 }
 export function betIx(bettor: PublicKey, market: PublicKey, side: 0 | 1, lamports: bigint) {
@@ -40,3 +44,15 @@ export async function readOracle(connection: import("@solana/web3.js").Connectio
 
 export type Market = { address: PublicKey; creator: PublicKey; id: bigint; closeTs: number; resolveTs: number; lat: number; lon: number; threshold: number; yes: bigint; no: bigint; outcome: number; precipitation: number };
 export function parseMarket(address: PublicKey, d: Buffer): Market { return { address, outcome: d[2], creator: new PublicKey(d.subarray(8, 40)), id: d.readBigUInt64LE(40), closeTs: Number(d.readBigInt64LE(48)), resolveTs: Number(d.readBigInt64LE(56)), lat: d.readInt32LE(64)/10000, lon: d.readInt32LE(68)/10000, threshold: d.readUInt16LE(72)/10, yes: d.readBigUInt64LE(80), no: d.readBigUInt64LE(88), precipitation: d.readUInt16LE(96)/10 }; }
+
+export type MarketPhase = "open" | "closed" | "awaiting-settlement" | "settled";
+export function marketPhase(market: Pick<Market, "closeTs" | "resolveTs" | "outcome">, now: number): MarketPhase {
+  if (market.outcome !== 0) return "settled";
+  if (now < market.closeTs) return "open";
+  if (now < market.resolveTs) return "closed";
+  return "awaiting-settlement";
+}
+
+export function hasUnfinishedMarket(markets: Pick<Market, "resolveTs" | "outcome">[], now: number) {
+  return markets.some((market) => market.outcome === 0 && now < market.resolveTs);
+}
