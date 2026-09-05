@@ -6,6 +6,7 @@
     "test": "tsx --test tests/*.test.ts",
     "init": "tsx scripts/initialize.ts",
     "oracle:set": "tsx scripts/set-oracle.ts",
+    "authority:set": "tsx scripts/set-authority.ts",
     "oracle:settle": "tsx oracle/settle.ts"
   },
   "devDependencies": {

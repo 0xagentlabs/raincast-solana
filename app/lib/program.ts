@@ -154,6 +154,16 @@ export function withdrawFeesIx(authority: PublicKey) {
     data: Buffer.from([6]),
   });
 }
+export function setAuthorityIx(authority: PublicKey, newAuthority: PublicKey) {
+  return new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: authority, isSigner: true, isWritable: false },
+      { pubkey: CONFIG, isSigner: false, isWritable: true },
+    ],
+    data: Buffer.concat([Buffer.from([7]), newAuthority.toBuffer()]),
+  });
+}
 export async function readConfig(
   connection: import("@solana/web3.js").Connection,
 ) {
