@@ -11,6 +11,7 @@ All integers are little-endian. The program ID is `BbkDnkPC7HD8TeNHp3iCDwjLxF3WD
 | 4 | Claim | none | bettor signer+writable; market writable; position writable |
 | 5 | SetOracle | new oracle `pubkey[32]` | config authority signer; config writable |
 | 6 | WithdrawFees | none | config authority signer+writable; config writable |
+| 7 | SetAuthority | new authority `pubkey[32]` | current config authority signer; config writable |
 
 PDA seeds: config `["config"]`; schedule `["schedule", latitude_e4_le, longitude_e4_le]`; market `["market", creator, market_id_le]`; position `["position", market, bettor]`.
 
@@ -21,5 +22,7 @@ Market data (200 bytes): discriminator 0; bump 1; outcome 2 (`0=open,1=YES,2=NO`
 Errors are custom codes 1–13 in enum order: invalid accounts, PDA, state, authority, time, amount, side, overflow, already initialized, already claimed, no winnings, stale observation, market overlap.
 
 `PlaceBet` requires `lamports >= 10_000_000` (0.01 SOL). The client may submit any exact lamport amount at or above this minimum.
+
+`SetAuthority` atomically replaces the config authority and can only be signed by the current authority.
 
 Settlement moves 1% of the total pool (integer division, rounded down) into the config PDA as platform revenue. Winners share all remaining proceeds proportionally; the final winning claim receives rounding dust. `WithdrawFees` lets only the config authority withdraw all revenue above the config rent reserve. If the winning side has zero stake, no fee is charged and every participant may reclaim their own stake.

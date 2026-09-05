@@ -72,8 +72,27 @@ pub fn process_instruction(
         4 => claim(accounts, rest),
         5 => set_oracle(accounts, rest),
         6 => withdraw_fees(accounts, rest),
+        7 => set_authority(accounts, rest),
         _ => Err(ProgramError::InvalidInstructionData),
     }
+}
+
+// accounts: current config authority signer, config writable; data: new authority pubkey[32]
+fn set_authority(a: &[AccountInfo], d: &[u8]) -> ProgramResult {
+    if a.len() != 2 || d.len() != 32 {
+        return Err(WeatherError::InvalidAccounts.into());
+    }
+    let (authority, config) = (&a[0], &a[1]);
+    if !authority.is_signer() || !config.is_writable() {
+        return Err(WeatherError::InvalidAccounts.into());
+    }
+    validate_config(config)?;
+    let mut cd = config.try_borrow_mut_data()?;
+    if &cd[8..40] != authority.key() {
+        return Err(WeatherError::InvalidAuthority.into());
+    }
+    cd[8..40].copy_from_slice(d);
+    Ok(())
 }
 
 // accounts: config authority signer, config writable; data: new oracle pubkey[32]
@@ -512,8 +531,8 @@ fn validate_position(a: &AccountInfo, market: &AccountInfo, bettor: &AccountInfo
     Ok(())
 }
 fn validate_schedule(a: &AccountInfo) -> ProgramResult {
-    let (expected, _) = find_program_address(&[b"schedule"], &ID);
-    if a.key() != &expected || a.owner() != &ID || a.data_len() != SCHEDULE_LEN {
+    // The coordinate-scoped PDA address is checked by create_market before this helper.
+    if a.owner() != &ID || a.data_len() != SCHEDULE_LEN {
         return Err(WeatherError::InvalidPda.into());
     }
     if a.try_borrow_data()?[0] != SCHEDULE_DISC {

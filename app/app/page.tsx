@@ -49,6 +49,7 @@ export default function Home() {
   const [oracle, setOracle] = useState<PublicKey>();
   const [authority, setAuthority] = useState<PublicKey>();
   const [fees, setFees] = useState(0n);
+  const [showAdmin, setShowAdmin] = useState(true);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const [cityId, setCityId] = useState(CITIES[0].id);
   const [betAmounts, setBetAmounts] = useState<Record<string, string>>({});
@@ -187,9 +188,29 @@ export default function Home() {
           <span>RainCast</span>
           <small>DEVNET</small>
         </div>
-        <WalletMultiButton />
+        <div className="nav-actions">
+          {isAdmin && isOperator && (
+            <div className="role-switch" aria-label="页面模式">
+              <button
+                type="button"
+                aria-pressed={!showAdmin}
+                onClick={() => setShowAdmin(false)}
+              >
+                市场操作
+              </button>
+              <button
+                type="button"
+                aria-pressed={showAdmin}
+                onClick={() => setShowAdmin(true)}
+              >
+                管理面板
+              </button>
+            </div>
+          )}
+          <WalletMultiButton />
+        </div>
       </nav>
-      {isAdmin ? (
+      {isAdmin && showAdmin ? (
         <>
           <section className="admin-hero">
             <div>
