@@ -50,6 +50,8 @@ export default function Home() {
   const [authority, setAuthority] = useState<PublicKey>();
   const [fees, setFees] = useState(0n);
   const [showAdmin, setShowAdmin] = useState(true);
+  const [adminStatus, setAdminStatus] = useState("all");
+  const [adminCity, setAdminCity] = useState("all");
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const [cityId, setCityId] = useState(CITIES[0].id);
   const [betAmounts, setBetAmounts] = useState<Record<string, string>>({});
@@ -178,6 +180,32 @@ export default function Home() {
     selectedCity.latitude,
     selectedCity.longitude,
   );
+  const adminMarkets = markets.filter((market) => {
+    const phase = marketPhase(market, now);
+    const city = cityLabel(market.lat, market.lon);
+    return (
+      (adminStatus === "all" || phase === adminStatus) &&
+      (adminCity === "all" || city === adminCity)
+    );
+  });
+  const adminCities = Array.from(
+    new Set(markets.map((market) => cityLabel(market.lat, market.lon))),
+  );
+  const phaseLabels = {
+    open: "接受预测",
+    closed: "已封盘",
+    "awaiting-settlement": "等待结算",
+    settled: "已结算",
+  } as const;
+
+  function openMarket(market: Market) {
+    setShowAdmin(false);
+    window.setTimeout(() => {
+      document
+        .getElementById(`market-${market.address.toBase58()}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
+  }
   return (
     <main>
       <nav>
@@ -294,6 +322,104 @@ export default function Home() {
                 刷新链上数据
               </button>
             </article>
+          </section>
+          <section className="admin-markets" aria-labelledby="admin-markets-title">
+            <div className="admin-markets-heading">
+              <div>
+                <p className="eyebrow">市场管理</p>
+                <h2 id="admin-markets-title">全部市场</h2>
+                <p>筛选市场后，可直接结算到期市场或进入对应市场操作。</p>
+              </div>
+              <span className="result-count" aria-live="polite">
+                {adminMarkets.length} / {markets.length} 个市场
+              </span>
+            </div>
+            <div className="admin-filters" aria-label="市场筛选">
+              <label>
+                市场状态
+                <select
+                  value={adminStatus}
+                  onChange={(event) => setAdminStatus(event.target.value)}
+                >
+                  <option value="all">全部状态</option>
+                  <option value="open">接受预测</option>
+                  <option value="closed">已封盘</option>
+                  <option value="awaiting-settlement">等待结算</option>
+                  <option value="settled">已结算</option>
+                </select>
+              </label>
+              <label>
+                城市
+                <select
+                  value={adminCity}
+                  onChange={(event) => setAdminCity(event.target.value)}
+                >
+                  <option value="all">全部城市</option>
+                  {adminCities.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </label>
+              {(adminStatus !== "all" || adminCity !== "all") && (
+                <button
+                  className="ghost clear-filters"
+                  onClick={() => {
+                    setAdminStatus("all");
+                    setAdminCity("all");
+                  }}
+                >
+                  清除筛选
+                </button>
+              )}
+            </div>
+            <div className="admin-market-list">
+              {adminMarkets.length === 0 ? (
+                <div className="admin-market-empty">没有符合当前筛选条件的市场。</div>
+              ) : adminMarkets.map((market) => {
+                const phase = marketPhase(market, now);
+                const total = market.yes + market.no;
+                const marketKey = market.address.toBase58();
+                return (
+                  <article className="admin-market-row" key={marketKey}>
+                    <div className="admin-market-main">
+                      <div>
+                        <span className={`status ${phase}`}>{phaseLabels[phase]}</span>
+                        <span className="admin-market-city">{cityLabel(market.lat, market.lon)}</span>
+                      </div>
+                      <strong>{new Date(market.resolveTs * 1000).toLocaleString("zh-CN")}</strong>
+                      <small title={marketKey}>{marketKey.slice(0, 8)}…{marketKey.slice(-6)}</small>
+                    </div>
+                    <dl className="admin-market-stats">
+                      <div><dt>奖池</dt><dd>{sol(total)} SOL</dd></div>
+                      <div><dt>YES / NO</dt><dd>{sol(market.yes)} / {sol(market.no)}</dd></div>
+                      <div><dt>结果</dt><dd>{market.outcome === 0 ? "—" : market.outcome === 1 ? "下雨" : "未下雨"}</dd></div>
+                    </dl>
+                    <div className="admin-market-actions">
+                      {phase === "awaiting-settlement" && isOperator && (
+                        <button
+                          className="primary"
+                          onClick={() => settle(market)}
+                          disabled={!!busy}
+                        >
+                          {busy === `settle-${market.address}` ? "结算中…" : "立即结算"}
+                        </button>
+                      )}
+                      <button className="ghost" onClick={() => openMarket(market)}>
+                        进入市场操作
+                      </button>
+                      <a
+                        className="admin-explorer-link"
+                        href={`https://explorer.solana.com/address/${market.address}?cluster=devnet`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        链上详情 <ExternalLink size={15} aria-hidden="true" />
+                      </a>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </section>
           <footer>
             管理面板仅对链上配置的平台运营地址显示。所有操作均在 Solana Devnet
@@ -414,14 +540,9 @@ export default function Home() {
               const canBet = phase === "open";
               const due = phase === "awaiting-settlement";
               const p = positions[m.address.toBase58()];
-              const statusLabel = {
-                open: "接受预测",
-                closed: "截止",
-                "awaiting-settlement": "等待结算",
-                settled: "已结算",
-              }[phase];
+              const statusLabel = phaseLabels[phase];
               return (
-                <article key={m.address.toBase58()}>
+                <article id={`market-${m.address.toBase58()}`} key={m.address.toBase58()}>
                   <div className="card-head">
                     <span className={`status ${phase}`}>{statusLabel}</span>
                     <a
