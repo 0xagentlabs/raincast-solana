@@ -14,6 +14,7 @@ export const CONFIG = PublicKey.findProgramAddressSync(
 )[0];
 export const MARKET_DURATION_SECONDS = 30 * 60;
 export const BETTING_WINDOW_SECONDS = 25 * 60;
+export const MIN_BET_LAMPORTS = 10_000_000n;
 const i64 = (n: bigint) => {
   const b = Buffer.alloc(8);
   b.writeBigInt64LE(n);
@@ -24,6 +25,18 @@ const u64 = (n: bigint) => {
   b.writeBigUInt64LE(n);
   return b;
 };
+
+export function solToLamports(value: string): bigint {
+  const normalized = value.trim();
+  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,9})?$/.test(normalized))
+    throw new Error("请输入最多 9 位小数的有效 SOL 金额");
+  const [whole, fraction = ""] = normalized.split(".");
+  const lamports =
+    BigInt(whole) * BigInt(1_000_000_000) +
+    BigInt(fraction.padEnd(9, "0") || "0");
+  if (lamports < MIN_BET_LAMPORTS) throw new Error("最低购买金额为 0.01 SOL");
+  return lamports;
+}
 
 export const marketPda = (creator: PublicKey, id: bigint) =>
   PublicKey.findProgramAddressSync(

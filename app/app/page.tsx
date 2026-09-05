@@ -31,6 +31,7 @@ import {
   readConfig,
   readPosition,
   settleIx,
+  solToLamports,
   withdrawFeesIx,
 } from "@/lib/program";
 import { CITIES, cityLabel } from "@/lib/cities";
@@ -51,6 +52,8 @@ export default function Home() {
   const [showAdmin, setShowAdmin] = useState(true);
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const [cityId, setCityId] = useState(CITIES[0].id);
+  const [betAmounts, setBetAmounts] = useState<Record<string, string>>({});
+  const [betErrors, setBetErrors] = useState<Record<string, string>>({});
   const selectedCity = CITIES.find((city) => city.id === cityId) ?? CITIES[0];
   const refresh = useCallback(async () => {
     const [rows, configured, rent] = await Promise.all([
@@ -146,6 +149,23 @@ export default function Home() {
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "结算失败");
       setBusy("");
+    }
+  }
+  async function placeBet(market: Market, side: 0 | 1) {
+    if (!wallet.publicKey) return;
+    const key = market.address.toBase58();
+    try {
+      const amount = solToLamports(betAmounts[key] ?? "0.01");
+      setBetErrors((errors) => ({ ...errors, [key]: "" }));
+      await send(
+        betIx(wallet.publicKey, market.address, side, amount),
+        `${key}-${side === 1 ? "yes" : "no"}`,
+      );
+    } catch (error) {
+      setBetErrors((errors) => ({
+        ...errors,
+        [key]: error instanceof Error ? error.message : "购买金额无效",
+      }));
     }
   }
   const isOperator =
@@ -441,41 +461,64 @@ export default function Home() {
                   {!m.outcome ? (
                     <>
                       {canBet && (
+                        <div className="bet-form">
+                          <label htmlFor={`bet-amount-${m.address}`}>
+                            购买金额（SOL）
+                          </label>
+                          <div className="amount-input">
+                            <input
+                              id={`bet-amount-${m.address}`}
+                              type="number"
+                              inputMode="decimal"
+                              min="0.01"
+                              step="0.01"
+                              value={betAmounts[m.address.toBase58()] ?? "0.01"}
+                              onChange={(event) => {
+                                const key = m.address.toBase58();
+                                setBetAmounts((amounts) => ({
+                                  ...amounts,
+                                  [key]: event.target.value,
+                                }));
+                                setBetErrors((errors) => ({ ...errors, [key]: "" }));
+                              }}
+                              onBlur={(event) => {
+                                const key = m.address.toBase58();
+                                try {
+                                  solToLamports(event.target.value);
+                                  setBetErrors((errors) => ({ ...errors, [key]: "" }));
+                                } catch (error) {
+                                  setBetErrors((errors) => ({
+                                    ...errors,
+                                    [key]: error instanceof Error ? error.message : "购买金额无效",
+                                  }));
+                                }
+                              }}
+                              aria-describedby={`bet-help-${m.address}`}
+                              aria-invalid={!!betErrors[m.address.toBase58()]}
+                              disabled={!!busy}
+                            />
+                            <span>SOL</span>
+                          </div>
+                          <p
+                            id={`bet-help-${m.address}`}
+                            className={betErrors[m.address.toBase58()] ? "field-error" : "field-help"}
+                          >
+                            {betErrors[m.address.toBase58()] || "最低 0.01 SOL，可自行输入购买金额"}
+                          </p>
                         <div className="bet-actions">
                           <button
-                            onClick={() =>
-                              wallet.publicKey &&
-                              send(
-                                betIx(
-                                  wallet.publicKey,
-                                  m.address,
-                                  1,
-                                  10_000_000n,
-                                ),
-                                m.address + "yes",
-                              )
-                            }
+                            onClick={() => placeBet(m, 1)}
                             disabled={!wallet.publicKey || !!busy}
                           >
-                            YES · 0.01 SOL
+                            购买 YES
                           </button>
                           <button
-                            onClick={() =>
-                              wallet.publicKey &&
-                              send(
-                                betIx(
-                                  wallet.publicKey,
-                                  m.address,
-                                  0,
-                                  10_000_000n,
-                                ),
-                                m.address + "no",
-                              )
-                            }
+                            onClick={() => placeBet(m, 0)}
                             disabled={!wallet.publicKey || !!busy}
                           >
-                            NO · 0.01 SOL
+                            购买 NO
                           </button>
+                        </div>
                         </div>
                       )}
                       {phase === "closed" && (

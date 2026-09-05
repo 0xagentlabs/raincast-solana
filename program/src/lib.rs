@@ -28,7 +28,7 @@ const CONFIG_DISC: u8 = 1;
 const MARKET_DISC: u8 = 2;
 const POSITION_DISC: u8 = 3;
 const SCHEDULE_DISC: u8 = 4;
-const MIN_BET: u64 = 100_000;
+const MIN_BET: u64 = 10_000_000;
 const MAX_OBSERVATION_DELAY: i64 = 48 * 60 * 60;
 
 #[repr(u32)]
@@ -596,6 +596,10 @@ mod tests {
     #[test]
     fn program_id_is_not_system() {
         assert_ne!(ID, pinocchio_system::ID);
+    }
+    #[test]
+    fn minimum_bet_is_point_zero_one_sol() {
+        assert_eq!(MIN_BET, 10_000_000);
     }
     #[test]
     fn rejects_overlapping_market() {
