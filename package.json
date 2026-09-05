@@ -1,0 +1,15 @@
+{
+  "name": "raincast-workspace",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "tsx --test tests/*.test.ts",
+    "init": "tsx scripts/initialize.ts",
+    "oracle:settle": "tsx oracle/settle.ts"
+  },
+  "devDependencies": {
+    "@solana/web3.js": "^1.98.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
