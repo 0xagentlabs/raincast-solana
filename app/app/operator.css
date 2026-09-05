@@ -24,4 +24,9 @@
 .admin-summary>div span { color: var(--muted); }
 .admin-summary>div strong { font-size: 24px; }
 .admin-summary .ghost { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin-top: auto; }
-@media(max-width:760px){.admin-hero{padding-top:35px;align-items:flex-start;flex-direction:column}.admin-grid{grid-template-columns:1fr;padding-top:16px}.admin-notice{margin-left:16px;margin-right:16px}.revenue-card,.admin-summary{padding:24px}}
+.nav-actions,.role-switch { display: flex; align-items: center; gap: 8px; }
+.role-switch { padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.role-switch button { min-height: 40px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 700; }
+.role-switch button[aria-pressed="true"] { background: #dcfce7; color: var(--primary); }
+.role-switch button:focus-visible { outline: 3px solid #86efac; outline-offset: 2px; }
+@media(max-width:760px){nav{height:auto;min-height:84px;align-items:flex-start;gap:12px;padding-top:16px;padding-bottom:16px}.nav-actions{align-items:flex-end;flex-direction:column}.role-switch button{min-height:44px}.admin-hero{padding-top:35px;align-items:flex-start;flex-direction:column}.admin-grid{grid-template-columns:1fr;padding-top:16px}.admin-notice{margin-left:16px;margin-right:16px}.revenue-card,.admin-summary{padding:24px}}
