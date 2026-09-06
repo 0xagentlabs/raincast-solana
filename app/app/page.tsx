@@ -448,10 +448,14 @@ export default function Home() {
               onChange={(event) => setCityId(event.target.value)}
               disabled={!!busy}
             >
-              {CITIES.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name} · {city.district}
-                </option>
+              {(["国内", "海外"] as const).map((region) => (
+                <optgroup key={region} label={region}>
+                  {CITIES.filter((city) => city.region === region).map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.name} · {city.district}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
