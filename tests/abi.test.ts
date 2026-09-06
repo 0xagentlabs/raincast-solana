@@ -46,8 +46,9 @@ test("each city has an independent schedule PDA", () => {
   assert.notEqual(schedulePda(31.13, 121.47).toBase58(), schedulePda(39.9, 116.4).toBase58());
   assert.equal(schedulePda(31.13, 121.47).toBase58(), schedulePda(31.13, 121.47).toBase58());
 });
-test("all supported cities have unique ids and coordinates", () => {
-  assert.equal(CITIES.length, 8);
+test("all supported domestic and overseas cities have unique ids and coordinates", () => {
+  assert.equal(CITIES.length, 24);
+  assert.deepEqual(new Set(CITIES.map((city) => city.region)), new Set(["国内", "海外"]));
   assert.equal(new Set(CITIES.map((city) => city.id)).size, CITIES.length);
   assert.equal(new Set(CITIES.map((city) => `${city.latitude},${city.longitude}`)).size, CITIES.length);
 });
