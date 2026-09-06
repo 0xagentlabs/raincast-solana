@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Keypair, PublicKey } from "@solana/web3.js";
-import { createMarketIx, hasUnfinishedMarket, marketPhase, MIN_BET_LAMPORTS, schedulePda, setAuthorityIx, solToLamports } from "../app/lib/program.ts";
+import { BETTING_WINDOW_SECONDS, createMarketIx, hasUnfinishedMarket, MARKET_DURATION_SECONDS, marketPhase, MIN_BET_LAMPORTS, schedulePda, setAuthorityIx, solToLamports } from "../app/lib/program.ts";
 import { CITIES, cityForCoordinates, cityLabel } from "../app/lib/cities.ts";
 const program = new PublicKey("BbkDnkPC7HD8TeNHp3iCDwjLxF3WDmg2Yrh9gVZrwohH");
 const u64 = (v: bigint) => { const b=Buffer.alloc(8); b.writeBigUInt64LE(v); return b; };
@@ -34,6 +34,10 @@ test("market status follows close and resolve timestamps", () => {
   assert.equal(marketPhase(market, 200), "closed");
   assert.equal(marketPhase(market, 300), "awaiting-settlement");
   assert.equal(marketPhase({ ...market, outcome: 1 }, 100), "settled");
+});
+test("markets run for 12 hours and close five minutes before settlement", () => {
+  assert.equal(MARKET_DURATION_SECONDS, 12 * 60 * 60);
+  assert.equal(BETTING_WINDOW_SECONDS, MARKET_DURATION_SECONDS - 5 * 60);
 });
 test("new market is blocked only by an unfinished interval in the same city", () => {
   const shanghai = { resolveTs: 300, outcome: 0, lat: 31.13, lon: 121.47 };

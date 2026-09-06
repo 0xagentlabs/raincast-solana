@@ -117,7 +117,7 @@ export default function Home() {
     if (!wallet.publicKey) return;
     const createdAt = Math.floor(Date.now() / 1000);
     if (hasUnfinishedMarket(markets, createdAt, selectedCity.latitude, selectedCity.longitude)) {
-      setNotice("当前城市已有未结束的 30 分钟市场，结束后才能创建下一场。");
+      setNotice("当前城市已有未结束的 12 小时市场，结束后才能创建下一场。");
       return;
     }
     const { ix } = createMarketIx(
@@ -432,13 +432,13 @@ export default function Home() {
         <div>
           <p className="eyebrow">天气 × 链上市场</p>
           <h1>
-            未来 30 分钟，
+            未来 12 小时，
             <br />
             {selectedCity.name}会下雨吗？
           </h1>
           <p className="lead">
             选择城市，发起基于 Open‑Meteo 实时降水数据的 Solana Devnet
-            预测市场。同一城市每次仅开放一个 30 分钟市场，不同城市可同时进行；测试 SOL，仅用于技术演示。
+            预测市场。同一城市每次仅开放一个 12 小时市场，不同城市可同时进行；测试 SOL，仅用于技术演示。
           </p>
           <div className="city-picker">
             <label htmlFor="city">预测城市</label>
@@ -466,7 +466,7 @@ export default function Home() {
               disabled={!wallet.publicKey || !!busy || creationBlocked}
             >
               {creationBlocked
-                ? "当前城市 30 分钟市场进行中"
+                ? "当前城市 12 小时市场进行中"
                 : `创建${selectedCity.name}预测市场`}
             </button>
             <a
@@ -483,7 +483,7 @@ export default function Home() {
             {selectedCity.name} · {selectedCity.district}
           </span>
           <CloudRain size={64} />
-          <strong>未来 30 分钟</strong>
+          <strong>未来 12 小时</strong>
           <p>降水量 ≥ 0.1 mm 即判定为“下雨”</p>
         </div>
       </section>
@@ -534,7 +534,7 @@ export default function Home() {
         <div className="grid">
           {markets.length === 0 ? (
             <div className="empty">
-              暂无市场。连接钱包后创建第一个 30 分钟市场。
+              暂无市场。连接钱包后创建第一个 12 小时市场。
             </div>
           ) : (
             markets.map((m) => {
