@@ -12,8 +12,8 @@ export const CONFIG = PublicKey.findProgramAddressSync(
   [Buffer.from("config")],
   PROGRAM_ID,
 )[0];
-export const MARKET_DURATION_SECONDS = 30 * 60;
-export const BETTING_WINDOW_SECONDS = 25 * 60;
+export const MARKET_DURATION_SECONDS = 12 * 60 * 60;
+export const BETTING_WINDOW_SECONDS = MARKET_DURATION_SECONDS - 5 * 60;
 export const MIN_BET_LAMPORTS = 10_000_000n;
 const i64 = (n: bigint) => {
   const b = Buffer.alloc(8);
